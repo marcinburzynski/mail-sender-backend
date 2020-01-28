@@ -7,6 +7,13 @@ name = "pypi"
 flask = "*"
 flask-sqlalchemy = "*"
 gunicorn = "*"
+sqlalchemy = "*"
+python-dotenv = "*"
+flask-migrate = "*"
+flask-bcrypt = "*"
+peewee = "*"
+peewee-migrations = "*"
+psycopg2 = "*"
 
 [dev-packages]
 
