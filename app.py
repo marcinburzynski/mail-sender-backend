@@ -1,5 +1,4 @@
 from flask import Flask, g, make_response
-from flask_sqlalchemy import SQLAlchemy
 import os
 import models
 from flask import request, jsonify
@@ -8,10 +7,26 @@ import uuid
 from flask_bcrypt import generate_password_hash, check_password_hash
 import datetime
 import jwt
+from celery import Celery
 
 app = Flask(__name__)
-app.config.from_object(os.getenv('APP_SETTINGS'))
 app.config['SECRET_KEY'] = 'oidjsj092138u90fwej'
+
+app = Flask(__name__)
+app.config.update(
+    CELERY_BROKER_URL='amqp://user:password@broker:5672',
+    CELERY_RESULT_BACKEND='amqp://user:password@broker:5672',
+)
+
+celery = Celery(
+    app.import_name,
+    backend=app.config['CELERY_RESULT_BACKEND'],
+    broker=app.config['CELERY_BROKER_URL']
+)
+
+@celery.task
+def add(x, y):
+    return x + y
 
 
 @app.before_request

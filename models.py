@@ -1,7 +1,7 @@
 from peewee import *
 import datetime
 
-DATABASE = PostgresqlDatabase('mailsender', user='mailadmin', password='Haslo123', host='127.0.0.1', port='5432')
+DATABASE = PostgresqlDatabase('mailsender', user='mailadmin', password='Haslo123', host='db', port='5432')
 
 
 class BaseModel(Model):

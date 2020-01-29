@@ -1,10 +1,58 @@
 version: '3'
 
 services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: mailadmin
+      POSTGRES_PASSWORD: Haslo123
+      POSTGRES_DB: mailsender
+    ports:
+      - 5432:5432
+
   backend:
     build: .
     volumes:
       - ./:/app
-      - ./static:/app/static
     ports:
     - 5000:5000
+    depends_on:
+      - db
+
+  flower:
+    image: zoomeranalytics/flower:0.9.2-4.0.2-2
+    restart: "no"
+    env_file:
+      - .env
+    ports:
+      - "5555:5555"
+    depends_on:
+      - broker
+
+  celery:
+    build: .
+    command: celery -A app.celery worker -l info
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+    depends_on:
+      - backend
+      - broker
+
+  celery-beat:
+    build: .
+    command: celery -A app.celery beat -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - broker
+      - backend
+
+  broker:
+    image: rabbitmq:3
+    env_file:
+      - .env
+    ports:
+      - 5672:5672

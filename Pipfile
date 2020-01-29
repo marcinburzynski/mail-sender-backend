@@ -15,6 +15,7 @@ peewee = "*"
 peewee-migrations = "*"
 psycopg2 = "*"
 pyjwt = "*"
+celery = "*"
 
 [dev-packages]
 
