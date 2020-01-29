@@ -69,4 +69,55 @@ class Event(BaseModel):
         event.save()
 
 
+class EmailConfig(BaseModel):
+    config_id = AutoField()
+    email = CharField()
+    password = CharField()
+    port = IntegerField(null=True)
+    ssl = BooleanField()
+    host = CharField()
+    user = ForeignKeyField(User)
 
+    @classmethod
+    def add_email_config(cls, email, config):
+        user = User.get(email=email)
+
+        cls.create(
+            email=config['email'],
+            password=config['password'],
+            port=config['port'],
+            ssl=config['ssl'],
+            host=config['host'],
+            user=user
+        )
+
+
+class AddressBook(BaseModel):
+    user = ForeignKeyField(User)
+    name = CharField()
+    address_book_id = AutoField()
+
+    @classmethod
+    def create_address_book(cls, email, name):
+        user = User.get(email=email)
+
+        cls.create(
+            user=user,
+            name=name
+        )
+
+
+class Address(BaseModel):
+    email = CharField()
+    full_name = CharField(null=True)
+    address_book = ForeignKeyField(AddressBook)
+
+    @classmethod
+    def create_address(cls, email, full_name, address_book_id):
+        address_book = AddressBook.get(address_book_id=address_book_id)
+
+        cls.create(
+            email=email,
+            full_name=full_name,
+            address_book=address_book
+        )

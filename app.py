@@ -24,6 +24,7 @@ celery = Celery(
     broker=app.config['CELERY_BROKER_URL']
 )
 
+
 @celery.task
 def add(x, y):
     return x + y
