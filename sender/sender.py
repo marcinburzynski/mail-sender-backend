@@ -20,8 +20,12 @@ class Sender:
         self.port = config['port']
         self.password = config['password']
 
+    def select_template(self):
+        with open('./templates/email.html') as template:
+            self.template = template
+
     def create_connection(self):
-        self.host = create_connection({
+        self.connection = create_connection({
             'host': self.host,
             'port': self.port,
             'email': self.email,
@@ -39,7 +43,7 @@ class Sender:
                     self.template,
                     self.image
                 )
-                self.host.sendmail(
+                self.connection.sendmail(
                     self.email,
                     clientEmail,
                     constructed_email

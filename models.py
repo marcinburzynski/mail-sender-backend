@@ -10,7 +10,7 @@ class BaseModel(Model):
 
 
 class User(BaseModel):
-    public_id = CharField()
+    public_id = CharField(unique=True)
     email = CharField(unique=True)
     password = CharField()
     role = CharField()
@@ -79,8 +79,7 @@ class EmailConfig(BaseModel):
     user = ForeignKeyField(User)
 
     @classmethod
-    def add_email_config(cls, email, config):
-        user = User.get(email=email)
+    def add_email_config(cls, user, config):
 
         cls.create(
             email=config['email'],
@@ -98,8 +97,7 @@ class AddressBook(BaseModel):
     address_book_id = AutoField()
 
     @classmethod
-    def create_address_book(cls, email, name):
-        user = User.get(email=email)
+    def create_address_book(cls, user, name):
 
         cls.create(
             user=user,
