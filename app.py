@@ -1,5 +1,6 @@
 from flask import Flask, g, make_response
 import os
+from werkzeug.utils import secure_filename
 import models
 from flask import request, jsonify
 import uuid
@@ -9,6 +10,9 @@ import jwt
 from celery import Celery
 from functools import wraps
 from utils.validate_request import validate_request
+from sender.sender import sender
+from utils.translators.translate_email_config_to_dict import translate_email_config_to_dict
+from dictionaries.event_status_dictionary import event_status_dictionary
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'oidjsj092138u90fwej'
@@ -45,11 +49,6 @@ def token_required(f):
         return f(current_user, *args, **kwargs)
 
     return decorated
-
-
-@celery.task
-def add(x, y):
-    return x + y
 
 
 @app.before_request
@@ -173,9 +172,74 @@ def create_addresses(current_user):
     return make_response('created addresses', 201)
 
 
-@app.route('/start-session', methods=['POST'])
-def start_session():
-    data = request.json
+@app.route('/images/upload', methods=['POST'])
+@token_required
+def upload_image(current_user):
+    image = request.files['image']
+    if image:
+        filename = secure_filename(image.filename)
+        path = os.path.join('./uploads', filename)
+        image.save(path)
+
+        created_image = models.Image.add_image(current_user, path, filename)
+        return make_response(jsonify({'image': created_image.image_id}), 201)
+
+
+@app.route('/session/start', methods=['POST'])
+@token_required
+def start_session(current_user):
+    # {
+    #     image: 'image-id',
+    #     email-config: 'config-id',
+    #     subject: 'subject',
+    #     address-book: 'address-book-id'
+    # }
+
+    send_emails.delay(request.json)
+
+    return make_response(jsonify({}), 201)
+
+
+@celery.task
+def send_emails(data):
+    session = models.Session.add_session()
+
+    image_entry = models.Image.get(image_id=data['image'])
+    image_path = image_entry.image_path
+
+    with open(image_path, 'rb') as _image:
+        image = _image.read()
+
+    mail_config_entry = models.EmailConfig.get(config_id=data['email-config'])
+    mail_config = translate_email_config_to_dict(mail_config_entry)
+
+    sender.email_config(mail_config)
+    sender.select_template()
+    sender.create_connection()
+    sender.set_image(image)
+
+    def on_success(client_email):
+        models.Event.add_event(
+            session,
+            mail_config_entry.email,
+            client_email,
+            'SUCCESS'
+        )
+
+    def on_failure(client_email):
+        models.Event.add_event(
+            session,
+            mail_config_entry.email,
+            client_email,
+            'FAILURE'
+        )
+
+    sender.send_emails(
+        data['subject'],
+        models.AddressBook.get_addresses_from_book(data['address-book']),
+        on_success,
+        on_failure
+    )
 
 
 if __name__ == '__main__':

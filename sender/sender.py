@@ -1,3 +1,5 @@
+import os
+
 from .connector import create_connection
 from .mail_constructor import construct_mail
 
@@ -20,9 +22,12 @@ class Sender:
         self.port = config['port']
         self.password = config['password']
 
+    def set_image(self, image):
+        self.image = image
+
     def select_template(self):
-        with open('./templates/email.html') as template:
-            self.template = template
+        with open('./sender/templates/email.html') as template:
+            self.template = template.read()
 
     def create_connection(self):
         self.connection = create_connection({
@@ -33,24 +38,24 @@ class Sender:
             'ssl': self.ssl
         })
 
-    def send_emails(self, subject, mails, on_success, on_fail):
-        for clientEmail in mails:
+    def send_emails(self, subject, mails, on_success, on_failure):
+        for client_email in mails:
             try:
                 constructed_email = construct_mail(
                     subject,
                     self.email,
-                    clientEmail,
+                    client_email,
                     self.template,
                     self.image
                 )
                 self.connection.sendmail(
                     self.email,
-                    clientEmail,
+                    client_email,
                     constructed_email
                 )
-                on_success()
+                on_success(client_email)
             except:
-                on_fail()
+                on_failure(client_email)
 
 
 sender = Sender()

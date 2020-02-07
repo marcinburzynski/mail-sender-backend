@@ -35,7 +35,8 @@ class Session(BaseModel):
 
     @classmethod
     def add_session(cls):
-        cls.create()
+        session = cls.create()
+        return session.session_id
 
     @classmethod
     def change_session_status(cls, session_id, status):
@@ -53,12 +54,13 @@ class Event(BaseModel):
     status = CharField(default='IN_PROGRESS')
 
     @classmethod
-    def add_event(cls, session_id, email_from, email_to):
+    def add_event(cls, session_id, email_from, email_to, status):
         session = Session.get(session_id=session_id)
         cls.create(
             session=session,
             email_from=email_from,
-            email_to=email_to
+            email_to=email_to,
+            status=status
         )
 
     @classmethod
@@ -104,6 +106,11 @@ class AddressBook(BaseModel):
             name=name
         )
 
+    @classmethod
+    def get_addresses_from_book(cls, address_book_id):
+        query = Address.select().where(Address.address_book == address_book_id)
+        return [address.email for address in query]
+
 
 class Address(BaseModel):
     email = CharField()
@@ -119,3 +126,20 @@ class Address(BaseModel):
             full_name=full_name,
             address_book=address_book
         )
+
+
+class Image(BaseModel):
+    image_id = AutoField()
+    image_path = CharField(unique=True)
+    image_name = CharField(null=True, unique=True)
+    user = ForeignKeyField(User)
+
+    @classmethod
+    def add_image(cls, user, image_path, image_name=None):
+        image = cls.create(
+            user=user,
+            image_path=image_path,
+            image_name=image_name
+        )
+
+        return image
