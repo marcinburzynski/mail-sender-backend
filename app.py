@@ -68,16 +68,28 @@ def index():
     return 'siemano'
 
 
-@app.route('/create-user', methods=['POST'])
-def create_user():
+@app.route('/users', methods=['POST'])
+@token_required
+def create_user(current_user):
     data = request.json
 
     hashed_password = generate_password_hash(data['password'])
-    models.User.create_user(str(uuid.uuid4()), data['email'], hashed_password, 'admin')
+    models.User.create_user(str(uuid.uuid4()), data['full_name'], data['email'], hashed_password)
 
     return jsonify({
         'message': 'New user created'
     })
+
+
+@app.route('/profile', methods=['GET'])
+@token_required
+def get_profile(current_user):
+    return make_response(
+        jsonify({
+            'fullName': current_user.full_name,
+            'email': current_user.email
+        })
+    )
 
 
 @app.route('/auth', methods=['POST'])
@@ -100,46 +112,81 @@ def auth():
         return make_response('password incorrect')
 
 
-@app.route('/create-email-config', methods=['POST'])
+@app.route('/email-config', methods=['GET', 'POST'])
 @token_required
-def create_email_config(current_user):
-    data = request.json
+def email_config(current_user):
+    if request.method == 'GET':
+        configs = models.EmailConfig.get_email_configs(current_user)
+        parsed_configs = [{
+            'configId': config.config_id,
+            'email': config.email,
+            'port': config.port,
+            'ssl': config.ssl,
+            'host': config.host
+        } for config in configs]
 
-    errors = validate_request(
-        data,
-        [
-            'email',
-            'ssl',
-            'host',
-            'port',
-            'password'
-        ]
-    )
+        return make_response(jsonify({'configs': parsed_configs}), 200)
 
-    if len(errors) >= 1:
-        return make_response(str(errors), 400)
+    if request.method == 'POST':
+        data = request.json
 
-    models.EmailConfig.add_email_config(current_user, data)
+        errors = validate_request(
+            data,
+            [
+                'email',
+                'ssl',
+                'host',
+                'port',
+                'password'
+            ]
+        )
 
-    return make_response('new email config created', 201)
+        if len(errors) >= 1:
+            return make_response(str(errors), 400)
+
+        models.EmailConfig.add_email_config(current_user, data)
+
+        return make_response('new email config created', 201)
 
 
-@app.route('/create-address-book', methods=['POST'])
+@app.route('/address-books', methods=['GET', 'POST'])
 @token_required
 def create_address_book(current_user):
-    data = request.json
+    if request.method == 'GET':
+        address_books_entries = models.AddressBook.get_address_books(current_user)
+        address_books_parsed = [{
+            'addressBookId': address_book.address_book_id,
+            'name': address_book.name
+        } for address_book in address_books_entries]
 
-    errors = validate_request(data, ['name'])
+        return make_response(jsonify({'addressBooks': address_books_parsed}), 200)
 
-    if len(errors) >= 1:
-        return make_response(str(errors), 400)
+    if request.method == 'POST':
+        data = request.json
 
-    models.AddressBook.create_address_book(current_user, data['name'])
+        errors = validate_request(data, ['name'])
 
-    return make_response('created address book', 201)
+        if len(errors) >= 1:
+            return make_response(str(errors), 400)
+
+        models.AddressBook.create_address_book(current_user, data['name'])
+
+        return make_response('created address book', 201)
 
 
-@app.route('/create-addresses', methods=['POST'])
+@app.route('/addresses/<int:address_book_id>', methods=['GET'])
+@token_required
+def get_addresses(current_user, address_book_id):
+    addresses_entries = models.Address.get_addresses(address_book_id)
+    addresses_parsed = [{
+        'email': address.full_name,
+        'fullName': address.full_name
+    } for address in addresses_entries]
+
+    return make_response(jsonify({'addresses': addresses_parsed}), 200)
+
+
+@app.route('/addresses', methods=['POST'])
 @token_required
 def create_addresses(current_user):
     data = request.json
@@ -185,7 +232,7 @@ def upload_image(current_user):
         return make_response(jsonify({'image': created_image.image_id}), 201)
 
 
-@app.route('/session/start', methods=['POST'])
+@app.route('/sessions/start', methods=['POST'])
 @token_required
 def start_session(current_user):
     # {
@@ -236,10 +283,59 @@ def send_emails(data):
 
     sender.send_emails(
         data['subject'],
-        models.AddressBook.get_addresses_from_book(data['address-book']),
+        models.AddressBook.get_addresses_from_book_for_sender(data['address-book']),
         on_success,
         on_failure
     )
+
+
+@app.route('/sessions', methods=['GET'])
+@token_required
+def get_sessions(current_user):
+    sessions_entries = models.Session.get_all_sessions()
+    sessions_parsed = []
+
+    for session in sessions_entries:
+        events_entries = models.Event.get_events(session.session_id)
+        successful_events_amount = len(
+            [event for event in filter(
+                lambda e: True if e.status == 'SUCCESS' else False,
+                events_entries
+            )]
+        )
+        failed_events_amount = len(
+            [event for event in filter(
+                lambda e: True if e.status == 'FAILURE' else False,
+                events_entries
+            )]
+        )
+
+        sessions_parsed = [
+            *sessions_parsed,
+            {
+                'sessionId': session.session_id,
+                'startedAt': session.startedAt,
+                'successfulEvents': successful_events_amount,
+                'failedEvents': failed_events_amount,
+            }
+        ]
+
+    return make_response(jsonify({'sessions': sessions_parsed}), 200)
+
+
+@app.route('/sessions/<int:session_id>', methods=['GET'])
+@token_required
+def get_events(current_user, session_id):
+    events_entries = models.Event.get_events(session_id)
+    events_parsed = [{
+        'eventId': event.event_id,
+        'emailFrom': event.email_from,
+        'emailTo': event.email_to,
+        'lastUpdate': event.last_update,
+        'status': event.status
+    } for event in events_entries]
+
+    return make_response(jsonify({'events': events_parsed}), 200)
 
 
 if __name__ == '__main__':

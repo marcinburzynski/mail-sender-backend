@@ -11,18 +11,18 @@ class BaseModel(Model):
 
 class User(BaseModel):
     public_id = CharField(unique=True)
+    full_name = CharField(null=True)
     email = CharField(unique=True)
     password = CharField()
-    role = CharField()
 
     @classmethod
-    def create_user(cls, public_id, email, password, role='USER'):
+    def create_user(cls, public_id, full_name, email, password):
         try:
             cls.create(
                 public_id=public_id,
+                full_name=full_name,
                 email=email,
-                password=password,
-                role=role
+                password=password
             )
         except IntegrityError:
             raise ValueError('user already exists')
@@ -43,6 +43,10 @@ class Session(BaseModel):
         session = cls.get(session_id=session_id)
         session.status = status
         session.save()
+
+    @classmethod
+    def get_all_sessions(cls):
+        return cls.select()
 
 
 class Event(BaseModel):
@@ -70,6 +74,12 @@ class Event(BaseModel):
         event.last_update = datetime.datetime.utcnow()
         event.save()
 
+    @classmethod
+    def get_events(cls, session_id):
+        session = Session.select().where(Session.session_id == session_id)
+
+        return cls.select().where(cls.session == session)
+
 
 class EmailConfig(BaseModel):
     config_id = AutoField()
@@ -92,6 +102,10 @@ class EmailConfig(BaseModel):
             user=user
         )
 
+    @classmethod
+    def get_email_configs(cls, current_user):
+        return cls.select().where(cls.user == current_user)
+
 
 class AddressBook(BaseModel):
     user = ForeignKeyField(User)
@@ -107,9 +121,13 @@ class AddressBook(BaseModel):
         )
 
     @classmethod
-    def get_addresses_from_book(cls, address_book_id):
+    def get_addresses_from_book_for_sender(cls, address_book_id):
         query = Address.select().where(Address.address_book == address_book_id)
         return [address.email for address in query]
+
+    @classmethod
+    def get_address_books(cls, current_user):
+        return cls.select().where(cls.user == current_user)
 
 
 class Address(BaseModel):
@@ -126,6 +144,11 @@ class Address(BaseModel):
             full_name=full_name,
             address_book=address_book
         )
+
+    @classmethod
+    def get_addresses(cls, address_book_id):
+        address_book = AddressBook.select().where(AddressBook.address_book_id == address_book_id)
+        return cls.select().where(cls.address_book == address_book)
 
 
 class Image(BaseModel):
