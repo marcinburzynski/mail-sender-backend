@@ -12,7 +12,7 @@ from functools import wraps
 from utils.validate_request import validate_request
 from sender.sender import sender
 from utils.translators.translate_email_config_to_dict import translate_email_config_to_dict
-from dictionaries.event_status_dictionary import event_status_dictionary
+from flask_cors import CORS
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'oidjsj092138u90fwej'
@@ -21,6 +21,8 @@ app.config.update(
     CELERY_BROKER_URL='amqp://user:password@broker:5672',
     CELERY_RESULT_BACKEND='amqp://user:password@broker:5672',
 )
+
+CORS(app)
 
 celery = Celery(
     app.import_name,
@@ -104,7 +106,7 @@ def auth():
     if check_password_hash(user.password, data['password']):
         token = jwt.encode({
             'public_id': user.public_id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30),
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=10),
         }, app.config['SECRET_KEY'])
 
         return jsonify({'token': token.decode('UTF-8')})

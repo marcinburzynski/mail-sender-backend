@@ -16,6 +16,7 @@ peewee-migrations = "*"
 psycopg2 = "*"
 pyjwt = "*"
 celery = "*"
+flask-cors = "*"
 
 [dev-packages]
 
