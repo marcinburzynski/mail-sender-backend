@@ -36,8 +36,8 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token = None
 
-        if 'access-token' in request.headers:
-            token = request.headers['access-token']
+        if 'accessToken' in request.headers:
+            token = request.headers['accessToken']
 
         if not token:
             return make_response('unauthorized', 401)
@@ -111,7 +111,7 @@ def auth():
 
         return jsonify({'token': token.decode('UTF-8')})
     else:
-        return make_response('password incorrect')
+        return make_response('password incorrect', 401)
 
 
 @app.route('/email-config', methods=['GET', 'POST'])
