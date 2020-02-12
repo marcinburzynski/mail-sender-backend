@@ -114,7 +114,7 @@ def auth():
         return make_response('password incorrect', 401)
 
 
-@app.route('/email-config', methods=['GET', 'POST'])
+@app.route('/email-config', methods=['GET', 'POST', 'PUT'])
 @token_required
 def email_config(current_user):
     if request.method == 'GET':
@@ -149,6 +149,22 @@ def email_config(current_user):
         models.EmailConfig.add_email_config(current_user, data)
 
         return make_response('new email config created', 201)
+
+
+@app.route('/email-config/<int:config_id>', methods=['PUT', 'DELETE'])
+@token_required
+def modify_email_config(current_user, config_id):
+    if request.method == 'PUT':
+        data = request.json
+
+        models.EmailConfig.edit_email_config(config_id, data)
+
+        return make_response({}, 201)
+
+    if request.method == 'DELETE':
+        models.EmailConfig.remove_email_config(config_id)
+
+        return make_response({}, 200)
 
 
 @app.route('/address-books', methods=['GET', 'POST'])

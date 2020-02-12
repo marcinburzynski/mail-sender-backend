@@ -106,6 +106,32 @@ class EmailConfig(BaseModel):
     def get_email_configs(cls, current_user):
         return cls.select().where(cls.user == current_user)
 
+    @classmethod
+    def edit_email_config(cls, config_id, new_values):
+        selected_config = cls.get(config_id=config_id)
+
+        if 'email' in new_values.keys():
+            selected_config.email = new_values['email']
+
+        if 'password' in new_values.keys():
+            selected_config.password = new_values['password']
+
+        if 'port' in new_values.keys():
+            selected_config.port = int(new_values['port'])
+
+        if 'ssl' in new_values.keys():
+            selected_config.ssl = new_values['ssl']
+
+        if 'host' in new_values.keys():
+            selected_config.host = new_values['host']
+
+        selected_config.save()
+
+    @classmethod
+    def remove_email_config(cls, config_id):
+        config_to_remove = cls.get(config_id=config_id)
+        config_to_remove.delete_instance()
+
 
 class AddressBook(BaseModel):
     user = ForeignKeyField(User)
