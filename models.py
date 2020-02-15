@@ -1,5 +1,6 @@
 from peewee import *
 import datetime
+from flask_bcrypt import generate_password_hash
 
 DATABASE = PostgresqlDatabase('mailsender', user='mailadmin', password='Haslo123', host='db', port='5432')
 
@@ -26,6 +27,22 @@ class User(BaseModel):
             )
         except IntegrityError:
             raise ValueError('user already exists')
+
+    @classmethod
+    def update_user(cls, current_user, values):
+        user = cls.get(public_id=current_user.public_id)
+
+        if 'fullName' in values:
+            user.full_name = values['fullName']
+
+        if 'email' in values:
+            user.email = values['email']
+
+        if 'newPassword' in values:
+            password_hash = generate_password_hash(values['newPassword'])
+            user.password = password_hash
+
+        user.save()
 
 
 class Session(BaseModel):

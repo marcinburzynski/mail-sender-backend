@@ -70,17 +70,21 @@ def index():
     return 'siemano'
 
 
-@app.route('/users', methods=['POST'])
+@app.route('/users', methods=['POST', 'PUT'])
 @token_required
 def create_user(current_user):
     data = request.json
 
-    hashed_password = generate_password_hash(data['password'])
-    models.User.create_user(str(uuid.uuid4()), data['full_name'], data['email'], hashed_password)
+    if request.method == 'POST':
+        hashed_password = generate_password_hash(data['password'])
+        models.User.create_user(str(uuid.uuid4()), data['full_name'], data['email'], hashed_password)
 
-    return jsonify({
-        'message': 'New user created'
-    })
+        return make_response(jsonify({'message': 'New user created'}), 201)
+
+    if request.method == 'PUT':
+        models.User.update_user(current_user, data)
+
+        return make_response(jsonify({'message': 'user updated'}, 200))
 
 
 @app.route('/profile', methods=['GET'])
