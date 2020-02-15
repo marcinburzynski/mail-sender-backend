@@ -173,13 +173,25 @@ def modify_email_config(current_user, config_id):
 
 @app.route('/address-books', methods=['GET', 'POST'])
 @token_required
-def create_address_book(current_user):
+def address_books(current_user):
     if request.method == 'GET':
         address_books_entries = models.AddressBook.get_address_books(current_user)
-        address_books_parsed = [{
-            'addressBookId': address_book.address_book_id,
-            'name': address_book.name
-        } for address_book in address_books_entries]
+
+        address_books_parsed = []
+
+        for address_book in address_books_entries:
+            addresses_in_book = len([
+                address for address in models.Address.get_addresses(address_book.address_book_id)
+            ])
+
+            address_books_parsed = [
+                *address_books_parsed,
+                {
+                    'addressBookId': address_book.address_book_id,
+                    'name': address_book.name,
+                    'addressesNo': addresses_in_book
+                }
+            ]
 
         return make_response(jsonify({'addressBooks': address_books_parsed}), 200)
 
